@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""
+enumerator: counts the number of binary NxN matrices which have exactly M ones in every row and every column with a brute force approach
+
+example: if N = 4 and M = 3, then a valid matrix could be:
+
+    0 1 1 1
+    1 1 1 0
+    1 0 1 1
+    1 1 0 1
+
+for N = 4 and M = 3, the following matrix would be invalid:
+
+    0 1 1 0
+    0 1 1 1
+    1 1 1 1
+    1 1 0 1
+
+the above is invalid because the first row and the first column have only 2 ones, and the second column and third row have 4 ones.
+
+usage:
+
+    ./enumerator --size 4 --ones 3 -v
+
+the -v flag will save all valid matrices to a timestamped log file.
+"""
+
+# imports (std library)
+import time
+import math
+import argparse
+import itertools
+import logging
+
+
+def matrix_is_valid(matrix, size, ones):
+    """
+    checks whether or not a binary matrix is valid.
+
+    to be valid, the matrix must have every row and column sum to the value provided in 'ones'
+
+    inputs:
+        matrix: a square, binary matrix
+        size:   the size of the matrix
+        ones:   the number of 1s to expect in every row and column
+
+    returns:
+        true if valid
+        false if invalid
+    """
+    # check every column
+    for col in map(list, zip(*matrix)):
+        # the sum of the column should be equal to 'ones' to be valid
+        if sum(col) != ones:
+            # matrix is invalid
+            return False
+    # now, check every row
+    for row in matrix:
+        # the sum of the row should also be equal to 'ones' tto be valid
+        if sum(row) != ones:
+            # matrix is invalid
+            return False
+    # matrix is valid
+    return True
+
+
+def get_matrices(size, ones):
+    """
+    returns a list of all valid matrices
+
+    to be valid, the matrix must have every row and column sum to the value provided in 'ones'
+
+    inputs:
+        size: the size of the matrix
+        ones: the number of 1s to expect in every row and column
+
+    returns:
+        matrices: a list of all valid matrices
+    """
+    # first, generate all possible rows that can exist in a valid matrix
+    rows = []
+    for row in itertools.permutations([1] * ones + [0] * (size - ones), r=size):
+        # don't count duplicates
+        if row not in rows:
+            rows.append(row)
+    # next, permute through these rows to generate all possible matrices
+    matrices = []
+    count = 0
+    for matrix in itertools.permutations(rows, size):
+        # only add matrix to the list if it is not there, and is valid
+        if (matrix not in matrices) and (matrix_is_valid(matrix, size, ones)):
+            # represent the matrix as a string for printing
+            log_str = "\n\n".join(
+                [
+                    "\t".join([str(matrix[i][j]) for i in range(size)])
+                    for j in range(size)
+                ]
+            )
+            # log the matrix (if debugging is on)
+            logging.debug(f"matrix number {count}\n" + log_str)
+            # add matrix to list and increment count
+            matrices.append(matrix)
+            count += 1
+    return matrices
+
+
+def main():
+    """
+    main function, called when program is run
+    """
+    # initialize args
+    parser = argparse.ArgumentParser(
+        prog="enumerator",
+        description="counts the number of binary NxN matrices which have exactly M 1's in every row and every column with a brute force approach",
+    )
+    parser.add_argument(
+        "-n",
+        "--size",
+        type=int,
+        required=True,
+        help="number of rows or columns in the square matrix",
+    )
+    parser.add_argument(
+        "-m", "--ones", type=int, default=3, help="number of 1's in every row or column"
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="set to true to print all valid matrices",
+    )
+
+    args = parser.parse_args()
+
+    # set log level to info by default
+    log_level = logging.INFO
+
+    # set log level to debug if verbose is true
+    if args.verbose:
+        log_level = logging.DEBUG
+
+    # create log file with timestamp in name
+    now = int(time.time())
+    logging.basicConfig(
+        filename=f"{now}-enumerator.log", encoding="utf-8", level=log_level
+    )
+
+    # generate list of matrices
+    if args.ones > args.size:
+        matrices = []
+    elif args.ones == args.size:
+        matrices = [[[1 for _ in range(args.size)] for _ in range(args.size)]]
+    else:
+        matrices = get_matrices(args.size, args.ones)
+
+    # count number of matrices
+    count = len(matrices)
+
+    # log the count of all matrices
+    logging.info(
+        f"number of {args.size}x{args.size} binary matrices with {args.ones} 1's in every row and column: {count}"
+    )
+
+
+if __name__ == "__main__":
+    # run main function
+    main()
