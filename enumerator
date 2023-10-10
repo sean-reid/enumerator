@@ -33,6 +33,29 @@ import itertools
 import logging
 
 
+def product_with_max_repeat(iterables, repeat, max_repeat):
+    """
+    wrapper around itertools.product which only yields a product if each element has fewer than max_repeat instances
+
+    inputs:
+        iterables:  iterables to create product
+        repeat:     number of times to repeat product
+        max_repeat: maximum amount of times a sample from the iterables can be repeated
+
+    yields:
+        i: cartesian product
+    """
+    for i in itertools.product(iterables, repeat=repeat):
+        t = tuple(j for j,_ in itertools.groupby(i))
+        valid = True
+        for j in t:
+            if i.count(j) >= max_repeat:
+                # invalid if there are too many
+                valid = False
+                break
+        if valid:
+            yield i
+
 def matrix_is_valid(matrix, size, ones):
     """
     checks whether or not a binary matrix is valid.
@@ -86,7 +109,7 @@ def get_matrices(size, ones):
     # next, permute through these rows to generate all possible matrices
     matrices = []
     count = 0
-    for matrix in itertools.product(rows, repeat=size):
+    for matrix in product_with_max_repeat(rows, repeat=size, max_repeat=ones):
         # only add matrix to the list if it is not there, and is valid
         if (matrix not in matrices) and (matrix_is_valid(matrix, size, ones)):
             # represent the matrix as a string for printing
